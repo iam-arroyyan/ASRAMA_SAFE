@@ -4,10 +4,54 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../widgets/logo_widget.dart';
-import '../widgets/custom_text_field.dart';
+import '../models/user_model.dart';
+import '../services/database_helper.dart';
 
-class LoginPage extends StatelessWidget {
+class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _isPasswordVisible = false;
+  bool _isLoading = false;
+
+  void _handleLogin() async {
+    if (_usernameController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Username dan Password harus diisi')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    // Cek Database
+    User? user = await DatabaseHelper.instance.loginUser(
+      _usernameController.text, 
+      _passwordController.text
+    );
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (user != null) {
+      // Login Berhasil
+      Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+    } else {
+      // Login Gagal
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: kWarningRed,
+          content: Text('Username atau Password salah!'),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,35 +64,40 @@ class LoginPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 80),
-              const LogoWidget(), // Widget Logo Kustom
+              const LogoWidget(),
               const SizedBox(height: 40),
 
-              const CustomTextField(
-                // Widget Input Kustom
-                hintText: 'Username',
-                prefixIcon: Icons.person_outline,
+              // Input Username
+              TextFormField(
+                controller: _usernameController,
+                decoration: const InputDecoration(
+                  hintText: 'Username',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
               ),
               const SizedBox(height: 20),
 
-              const CustomTextField(
-                // Widget Input Kustom
-                hintText: 'Password',
-                prefixIcon: Icons.lock_outline,
-                isPassword: true,
+              // Input Password
+              TextFormField(
+                controller: _passwordController,
+                obscureText: !_isPasswordVisible,
+                decoration: InputDecoration(
+                  hintText: 'Password',
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off),
+                    onPressed: () {
+                      setState(() {
+                        _isPasswordVisible = !_isPasswordVisible;
+                      });
+                    },
+                  ),
+                ),
               ),
               const SizedBox(height: 40),
 
               ElevatedButton(
-                onPressed: () {
-                  // TODO: Logika login
-
-                  // Setelah login berhasil:
-                  Navigator.pushNamedAndRemoveUntil(
-                    context,
-                    '/',
-                    (route) => false,
-                  );
-                },
+                onPressed: _isLoading ? null : _handleLogin,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: kPrimaryColor,
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -56,14 +105,12 @@ class LoginPage extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12.0),
                   ),
                 ),
-                child: const Text(
-                  'Login',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child: _isLoading 
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Text(
+                      'Login',
+                      style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
               ),
               const SizedBox(height: 24),
 
@@ -82,7 +129,6 @@ class LoginPage extends StatelessWidget {
                         ),
                         recognizer: TapGestureRecognizer()
                           ..onTap = () {
-                            // Navigasi menggunakan named route
                             Navigator.pushNamed(context, '/signup');
                           },
                       ),

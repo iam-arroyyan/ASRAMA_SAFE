@@ -1,12 +1,24 @@
 // lib/main.dart
 
+import 'dart:io'; // Diperlukan untuk cek Platform
 import 'package:flutter/material.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart'; // Import package FFI
+import 'package:sqflite/sqflite.dart'; // Import sqflite utama
+
 import 'pages/login_page.dart';
 import 'pages/signup_page.dart';
-import 'pages/main_shell.dart'; // <-- IMPORT BARU
+import 'pages/main_shell.dart';
 import 'theme/colors.dart';
 
 void main() {
+  // --- Inisialisasi Database untuk Windows/Desktop ---
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    // Inisialisasi FFI
+    sqfliteFfiInit();
+    // Ubah factory database ke FFI
+    databaseFactory = databaseFactoryFfi;
+  }
+  
   runApp(const MyApp());
 }
 
@@ -46,16 +58,11 @@ class MyApp extends StatelessWidget {
         ),
       ),
 
-      // --- Mengatur Rute Navigasi ---
-      // initialRoute: '/login', // Tetap mulai dari login
-      
-      // Ganti initialRoute ke '/' agar kita bisa tes MainShell
-      initialRoute: '/login', // <-- GANTI SEMENTARA UNTUK TES
+      // Mulai dari Login Page
+      initialRoute: '/login', 
       
       routes: {
-        // Rute baru untuk halaman utama
         '/': (context) => const MainShell(), 
-        
         '/login': (context) => const LoginPage(),
         '/signup': (context) => const SignUpPage(),
       },
