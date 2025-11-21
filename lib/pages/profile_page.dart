@@ -1,18 +1,161 @@
-// lib/pages/profile_page.dart
+import 'package:apiiii/pages/help_page.dart';
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
+import 'settings_notification_page.dart'; // Import halaman pengaturan notifikasi
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  // Data dummy profil
+  String _username = 'Meisya';
+  String _email = 'meisyamn@gmail.com';
+
+  // Controller untuk text field di dialog
+  late TextEditingController _usernameController;
+  late TextEditingController _emailController;
+
+  @override
+  void initState() {
+    super.initState();
+    _usernameController = TextEditingController(text: _username);
+    _emailController = TextEditingController(text: _email);
+  }
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  // Fungsi untuk menampilkan dialog edit profil
+  void _showEditProfileDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          elevation: 0,
+          backgroundColor: Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Edit Profil',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: kTextColor,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                
+                // Input Username
+                const Text('Username', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                TextField(
+                  controller: _usernameController,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(vertical: 8),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.grey),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: kPrimaryColor),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Input E-mail
+                const Text('E-mail', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                TextField(
+                  controller: _emailController,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(vertical: 8),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.grey),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: kPrimaryColor),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 30),
+
+                // Tombol Aksi
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          // Reset nilai jika batal
+                          _usernameController.text = _username;
+                          _emailController.text = _email;
+                          Navigator.pop(context);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kPrimaryColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: const Text('BATAL', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          // Simpan perubahan
+                          setState(() {
+                            _username = _usernameController.text;
+                            _email = _emailController.text;
+                          });
+                          Navigator.pop(context);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kPrimaryColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: const Text('Simpan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kProfileBgColor, // Warna BG beda
+      backgroundColor: kProfileBgColor,
       appBar: AppBar(
         backgroundColor: kPrimaryColor,
         elevation: 0,
-        title: Text(
+        centerTitle: true,
+        title: const Text(
           'Profil Akun',
           style: TextStyle(
             color: Colors.white,
@@ -20,9 +163,9 @@ class ProfilePage extends StatelessWidget {
           ),
         ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
           onPressed: () {
-            // Ini akan di-handle oleh MainShell, tapi bagus untuk ada
+            // Logika back jika diperlukan, biasanya dihandle MainShell
           },
         ),
       ),
@@ -31,25 +174,43 @@ class ProfilePage extends StatelessWidget {
           _buildProfileHeader(),
           Expanded(
             child: Container(
-              color: Colors.white, // Bagian bawah putih
+              color: Colors.white,
               child: Column(
                 children: [
                   const SizedBox(height: 20),
+                  
+                  // Menu Pengaturan Notifikasi
                   _buildOptionItem(
                     icon: Icons.notifications_outlined,
                     title: 'Pengaturan Notifikasi',
+                    onTap: () {
+                      Navigator.push(
+                        context, 
+                        MaterialPageRoute(builder: (context) => const SettingsNotificationPage()),
+                      );
+                    },
                   ),
+                  
                   _buildOptionItem(
                     icon: Icons.help_outline,
                     title: 'Bantuan',
+                    onTap: () {
+                      Navigator.push(
+                        context, 
+                        MaterialPageRoute(builder: (context) => const HelpPage()),
+                      );
+                    },
                   ),
+                  
                   _buildOptionItem(
                     icon: Icons.info_outline,
                     title: 'Tentang Aplikasi',
+                    onTap: () {},
                   ),
-                  Spacer(),
+                  
+                  const Spacer(),
                   _buildLogoutButton(),
-                  SizedBox(height: 40),
+                  const SizedBox(height: 40),
                 ],
               ),
             ),
@@ -69,42 +230,39 @@ class ProfilePage extends StatelessWidget {
           CircleAvatar(
             radius: 50,
             backgroundColor: kPrimaryColor.withOpacity(0.2),
-            child: Icon(
-              Icons.person,
+            child: const Icon(
+              Icons.person_outline,
               size: 60,
-              color: kPrimaryColor,
+              color: Colors.brown, // Sesuaikan warna icon agar mirip gambar
             ),
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text(
-            'Meisya',
-            style: TextStyle(
+            _username,
+            style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
               color: kTextColor,
             ),
           ),
           Text(
-            'meisyamn@gmail.com',
+            _email,
             style: TextStyle(
               fontSize: 16,
               color: Colors.grey[700],
             ),
           ),
-          SizedBox(height: 16),
-          TextButton(
-            onPressed: () {},
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.edit, size: 16, color: kPrimaryColor),
-                SizedBox(width: 4),
-                Text(
-                  'Edit Profil',
-                  style: TextStyle(color: kPrimaryColor),
-                ),
-                Icon(Icons.chevron_right, size: 16, color: kPrimaryColor),
-              ],
+          const SizedBox(height: 16),
+          
+          // Tombol Trigger Edit Profil
+          GestureDetector(
+            onTap: _showEditProfileDialog,
+            child: const Text(
+              'Edit Profil',
+              style: TextStyle(
+                color: Colors.grey,
+                decoration: TextDecoration.underline,
+              ),
             ),
           ),
         ],
@@ -112,19 +270,23 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildOptionItem({required IconData icon, required String title}) {
+  Widget _buildOptionItem({
+    required IconData icon, 
+    required String title,
+    required VoidCallback onTap,
+  }) {
     return ListTile(
-      leading: Icon(icon, color: Colors.grey[700]),
+      leading: Icon(icon, color: kPrimaryColor), // Icon warna orange
       title: Text(
         title,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w500,
           color: kTextColor,
         ),
       ),
       trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
-      onTap: () {},
+      onTap: onTap,
     );
   }
 
@@ -133,28 +295,27 @@ class ProfilePage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 24.0),
       child: ElevatedButton(
         onPressed: () {
-          // TODO: Tambahkan logika logout
-          // Contoh: kembali ke halaman Login
-          // Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+          // Navigasi kembali ke login dan hapus semua route sebelumnya
+          Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: kPrimaryColor.withOpacity(0.15),
-          elevation: 0,
+          backgroundColor: const Color(0xFFC65231), // Warna merah bata/gelap tombol logout
+          elevation: 2,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          padding: EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.symmetric(vertical: 16),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.logout, color: kPrimaryColor),
+          children: const [
+            Icon(Icons.logout, color: Colors.white),
             SizedBox(width: 8),
             Text(
-              'Log Out',
+              'logout',
               style: TextStyle(
                 fontSize: 18,
-                color: kPrimaryColor,
+                color: Colors.white,
                 fontWeight: FontWeight.bold,
               ),
             ),

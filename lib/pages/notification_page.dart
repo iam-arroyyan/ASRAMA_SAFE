@@ -14,15 +14,13 @@ class NotificationPage extends StatelessWidget {
         backgroundColor: kBackgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: kTitleColor, size: 28),
+          icon: const Icon(Icons.arrow_back, color: kTitleColor, size: 28),
           onPressed: () {
-            // Karena ini adalah bagian dari tab, tombol kembali ini
-            // mungkin seharusnya mengarahkan ke tab 'Beranda'.
-            // Untuk saat ini, kita biarkan non-fungsional atau
-            // Anda bisa membuatnya pop() jika halaman ini didorong (push).
+            // FUNGSI KEMBALI DITAMBAHKAN DI SINI
+            Navigator.pop(context); 
           },
         ),
-        title: Text(
+        title: const Text(
           'Notifikasi',
           style: TextStyle(
             color: kTitleColor,
@@ -90,7 +88,7 @@ class NotificationPage extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.notifications_rounded, color: kTextColor, size: 28),
+          const Icon(Icons.notifications_rounded, color: kTextColor, size: 28),
           const SizedBox(width: 16),
           Expanded(
             child: Text(

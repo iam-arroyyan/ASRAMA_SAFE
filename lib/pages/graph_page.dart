@@ -25,9 +25,14 @@ class _GraphPageState extends State<GraphPage> {
       appBar: AppBar(
         backgroundColor: kBackgroundColor,
         elevation: 0,
-        // Tombol kembali (opsional, bisa dihapus jika tidak perlu)
-        leading: Icon(Icons.arrow_back, color: kTitleColor, size: 28),
-        title: Text(
+        // GANTI ICON BIASA MENJADI ICONBUTTON
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: kTitleColor, size: 28),
+          onPressed: () {
+            Navigator.pop(context); // Fungsi kembali
+          },
+        ),
+        title: const Text(
           'Grafik',
           style: TextStyle(
             color: kTitleColor,
@@ -105,7 +110,7 @@ class _GraphPageState extends State<GraphPage> {
         children: [
           Text(
             title,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: kTextColor,
@@ -120,7 +125,7 @@ class _GraphPageState extends State<GraphPage> {
           ),
           const SizedBox(height: 24),
           // Container untuk menampung grafik
-          Container(
+          SizedBox(
             height: 250,
             child: chart,
           ),
@@ -133,20 +138,20 @@ class _GraphPageState extends State<GraphPage> {
   Widget _buildGasChart() {
     // TODO: Ganti ini dengan data asli dari sensor MQ2 Anda
     final List<FlSpot> dummyData = [
-      FlSpot(0, 150),
-      FlSpot(1, 155),
-      FlSpot(2, 160),
-      FlSpot(3, 158),
-      FlSpot(4, 250), // Lonjakan gas
-      FlSpot(5, 220),
-      FlSpot(6, 180),
-      FlSpot(7, 160),
+      const FlSpot(0, 150),
+      const FlSpot(1, 155),
+      const FlSpot(2, 160),
+      const FlSpot(3, 158),
+      const FlSpot(4, 250), // Lonjakan gas
+      const FlSpot(5, 220),
+      const FlSpot(6, 180),
+      const FlSpot(7, 160),
     ];
 
     return LineChart(
       LineChartData(
-        gridData: FlGridData(show: true),
-        titlesData: FlTitlesData(
+        gridData: const FlGridData(show: true),
+        titlesData: const FlTitlesData(
           topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
           rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
           bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 30, interval: 1)),
@@ -160,7 +165,7 @@ class _GraphPageState extends State<GraphPage> {
             color: kWarningRed, // Warna merah/oranye untuk gas
             barWidth: 4,
             isStrokeCapRound: true,
-            dotData: FlDotData(show: false),
+            dotData: const FlDotData(show: false),
             belowBarData: BarAreaData(
               show: true,
               color: kWarningRed.withOpacity(0.3),
