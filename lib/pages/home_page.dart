@@ -1,11 +1,21 @@
 // lib/pages/home_page.dart
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';                    // ← TAMBAH
 import '../theme/colors.dart';
-import 'notification_page.dart'; // Import halaman notifikasi
-import 'graph_page.dart'; // Import halaman grafik
+import '../services/firebase_service.dart';         // ← TAMBAH
+import '../models/gas_reading.dart';                // ← TAMBAH
+import 'notification_page.dart';
+import 'graph_page.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {             // ← UBAH jadi StatefulWidget
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  final FirebaseService _firebaseService = FirebaseService();  // ← TAMBAH
 
   @override
   Widget build(BuildContext context) {
@@ -25,12 +35,36 @@ class HomePage extends StatelessWidget {
                 fontSize: 22,
               ),
             ),
-            Text(
-              'Last sync: 1 min ago',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 12,
-              ),
+            StreamBuilder<GasReading?>(          // ← UBAH jadi StreamBuilder
+              stream: _firebaseService.latestReadingStream,
+              builder: (context, snapshot) {
+                if (snapshot.hasData && snapshot.data != null) {
+                  final reading = snapshot.data!;
+                  final timeAgo = DateTime.now().difference(reading.timestamp);
+                  String syncText;
+                  if (timeAgo.inMinutes < 1) {
+                    syncText = 'Baru saja';
+                  } else if (timeAgo.inMinutes < 60) {
+                    syncText = '${timeAgo.inMinutes} menit yang lalu';
+                  } else {
+                    syncText = '${timeAgo.inHours} jam yang lalu';
+                  }
+                  return Text(
+                    'Last sync: $syncText',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                    ),
+                  );
+                }
+                return Text(
+                  'Last sync: Loading...',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 12,
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -61,16 +95,15 @@ class HomePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildStatusCard(),
+            _buildStatusCard(),                    // ← REALTIME dari Firebase
             const SizedBox(height: 24),
             _buildSectionTitle('Aksi Cepat'),
             const SizedBox(height: 16),
-            // Pass context agar bisa melakukan navigasi
             _buildQuickActions(context),
             const SizedBox(height: 24),
             _buildSectionTitle('Aktivitas Terakhir'),
             const SizedBox(height: 16),
-            _buildActivityList(),
+            _buildActivityList(),                  // ← REALTIME dari Firebase
           ],
         ),
       ),
@@ -78,40 +111,64 @@ class HomePage extends StatelessWidget {
   }
 
   Widget _buildStatusCard() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: kSafeGreen,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: const Center(
-        child: Column(
-          children: [
-            Text(
-              'Status Asrama Saat Ini:',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-              ),
+    return StreamBuilder<GasReading?>(            // ← REALTIME dari Firebase
+      stream: _firebaseService.latestReadingStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(16),
             ),
-            SizedBox(height: 8),
-            Text(
-              'AMAN',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 48,
-                fontWeight: FontWeight.bold,
-              ),
+            child: const Center(
+              child: CircularProgressIndicator(),
             ),
-            SizedBox(height: 8),
-            Text(
-              'Nilai Gas rata-rata: 150 PPM',
-              style: TextStyle(color: Colors.white, fontSize: 14),
+          );
+        }
+
+        final reading = snapshot.data;
+        final isSafe = reading?.isSafe ?? true;
+        final statusText = reading?.statusText ?? 'MENUNGGU DATA';
+        final ppmValue = reading?.ppm.toStringAsFixed(1) ?? '-';
+        final bgColor = isSafe ? kSafeGreen : Colors.red;
+
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Center(
+            child: Column(
+              children: [
+                const Text(
+                  'Status Asrama Saat Ini:',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  statusText,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 48,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Nilai Gas rata-rata: $ppmValue PPM',
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -130,7 +187,6 @@ class HomePage extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
-        // Tombol Notifikasi
         _buildActionItem(
           icon: Icons.notifications,
           label: 'Notifikasi',
@@ -141,10 +197,9 @@ class HomePage extends StatelessWidget {
             );
           },
         ),
-        // Tombol Grafik (Pengganti Histori)
         _buildActionItem(
-          icon: Icons.auto_graph, // Menggunakan icon grafik
-          label: 'Grafik',        // Label diganti jadi Grafik
+          icon: Icons.auto_graph,
+          label: 'Grafik',
           onTap: () {
             Navigator.push(
               context,
@@ -152,7 +207,6 @@ class HomePage extends StatelessWidget {
             );
           },
         ),
-        // Tombol 113
         _buildActionItem(
           icon: Icons.phone_in_talk,
           label: '113',
@@ -166,11 +220,10 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // Widget item yang bisa diklik
   Widget _buildActionItem({
     required IconData icon,
     required String label,
-    required VoidCallback onTap, // Parameter untuk aksi klik
+    required VoidCallback onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -192,22 +245,49 @@ class HomePage extends StatelessWidget {
   }
 
   Widget _buildActivityList() {
-    return Column(
-      children: [
-        _buildActivityItem(
-          icon: Icons.warning,
-          iconColor: kWarningYellow,
-          title: 'PERINGATAN DINI: GAS 205 PPM',
-          subtitle: '(1 jam yang lalu)',
-        ),
-        const SizedBox(height: 16),
-        _buildActivityItem(
-          icon: Icons.check_circle,
-          iconColor: kSafeGreen,
-          title: 'Status Kembali Normal: AMAN',
-          subtitle: '(Status Diperbarui)',
-        ),
-      ],
+    return StreamBuilder<List>(                   // ← REALTIME dari Firebase
+      stream: _firebaseService.alertsStream,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Column(
+            children: [
+              _buildActivityItem(
+                icon: Icons.check_circle,
+                iconColor: kSafeGreen,
+                title: 'Status: AMAN',
+                subtitle: 'Tidak ada aktivitas mencurigakan',
+              ),
+            ],
+          );
+        }
+
+        final alerts = snapshot.data!.take(2).toList(); // Ambil 2 alert terbaru
+        return Column(
+          children: alerts.map((alert) {
+            final timeAgo = DateTime.now().difference(alert.detectedAt);
+            String timeText;
+            if (timeAgo.inMinutes < 60) {
+              timeText = '${timeAgo.inMinutes} menit yang lalu';
+            } else if (timeAgo.inHours < 24) {
+              timeText = '${timeAgo.inHours} jam yang lalu';
+            } else {
+              timeText = DateFormat('dd MMM HH:mm').format(alert.detectedAt);
+            }
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16.0),
+              child: _buildActivityItem(
+                icon: Icons.warning,
+                iconColor: alert.severity == 'critical'
+                    ? Colors.red
+                    : kWarningYellow,
+                title: 'PERINGATAN: GAS ${alert.mq2Value} (${alert.severity.toUpperCase()})',
+                subtitle: timeText,
+              ),
+            );
+          }).toList(),
+        );
+      },
     );
   }
 

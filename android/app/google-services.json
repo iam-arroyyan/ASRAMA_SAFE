@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "242647940418",
+    "firebase_url": "https://asrama-safe-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "asrama-safe",
+    "storage_bucket": "asrama-safe.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:242647940418:android:ca779b35370b7585d05cdb",
+        "android_client_info": {
+          "package_name": "com.example.asramasafe"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC2NA1pg0nV_OzbHUDzb9UWJR6V2ODq5bo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

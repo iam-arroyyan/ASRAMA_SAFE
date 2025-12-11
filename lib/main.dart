@@ -1,21 +1,26 @@
 // lib/main.dart
-
-import 'dart:io'; // Diperlukan untuk cek Platform
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart'; // Import package FFI
-import 'package:sqflite/sqflite.dart'; // Import sqflite utama
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:firebase_core/firebase_core.dart';  // ← TAMBAH INI
+import 'firebase_options.dart';                      // ← TAMBAH INI
 
 import 'pages/login_page.dart';
 import 'pages/signup_page.dart';
 import 'pages/main_shell.dart';
 import 'theme/colors.dart';
 
-void main() {
-  // --- Inisialisasi Database untuk Windows/Desktop ---
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();  // ← TAMBAH INI
+  
+  // Initialize Firebase
+  await Firebase.initializeApp(                // ← TAMBAH INI
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    // Inisialisasi FFI
     sqfliteFfiInit();
-    // Ubah factory database ke FFI
     databaseFactory = databaseFactoryFfi;
   }
   
@@ -58,7 +63,6 @@ class MyApp extends StatelessWidget {
         ),
       ),
 
-      // Mulai dari Login Page
       initialRoute: '/login', 
       
       routes: {
