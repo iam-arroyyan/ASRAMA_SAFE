@@ -3,8 +3,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:firebase_core/firebase_core.dart';  // ← TAMBAH INI
-import 'firebase_options.dart';                      // ← TAMBAH INI
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';      // ← TAMBAH
+import 'firebase_options.dart';
 
 import 'pages/login_page.dart';
 import 'pages/signup_page.dart';
@@ -12,10 +13,9 @@ import 'pages/main_shell.dart';
 import 'theme/colors.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();  // ← TAMBAH INI
+  WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize Firebase
-  await Firebase.initializeApp(                // ← TAMBAH INI
+  await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
   
@@ -63,12 +63,30 @@ class MyApp extends StatelessWidget {
         ),
       ),
 
-      initialRoute: '/login', 
+      // Auth Check: Jika sudah login langsung ke MainShell
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          
+          if (snapshot.hasData) {
+            // User sudah login
+            return const MainShell();
+          }
+          
+          // User belum login
+          return const LoginPage();
+        },
+      ),
       
       routes: {
-        '/': (context) => const MainShell(), 
         '/login': (context) => const LoginPage(),
         '/signup': (context) => const SignUpPage(),
+        '/home': (context) => const MainShell(),
       },
     );
   }

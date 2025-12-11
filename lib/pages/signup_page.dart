@@ -1,11 +1,8 @@
 // lib/pages/signup_page.dart
-
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
-import '../widgets/logo_widget.dart';
-import '../models/user_model.dart';
-import '../services/database_helper.dart';
+import '../services/auth_service.dart';
+import 'login_page.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -15,186 +12,262 @@ class SignUpPage extends StatefulWidget {
 }
 
 class _SignUpPageState extends State<SignUpPage> {
-  final _usernameController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
-  
-  bool _agreeToTerms = false;
+  final _confirmPasswordController = TextEditingController();
+  final AuthService _authService = AuthService();
   bool _isLoading = false;
-  bool _isPasswordVisible = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
-  // Fungsi Pendaftaran
-  void _handleSignUp() async {
-    if (_usernameController.text.isEmpty || 
-        _emailController.text.isEmpty || 
-        _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mohon isi semua kolom')),
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    // Cek apakah username sudah ada
-    bool exists = await DatabaseHelper.instance.checkUsernameExists(_usernameController.text);
-    
-    if (exists) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Username sudah digunakan')),
-      );
-    } else {
-      // Simpan ke Database
-      User newUser = User(
-        username: _usernameController.text,
-        email: _emailController.text,
-        password: _passwordController.text, // Catatan: Sebaiknya di-hash untuk keamanan produksi
-      );
-
-      await DatabaseHelper.instance.registerUser(newUser);
-
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(backgroundColor: kSafeGreen, content: Text('Akun berhasil dibuat! Silakan Login.')),
-      );
-      
-      Navigator.pop(context); // Kembali ke Login
-    }
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
   }
+
+  Future<void> _handleSignUp() async {
+  if (!_formKey.currentState!.validate()) return;
+
+  setState(() => _isLoading = true);
+
+  final result = await _authService.registerWithEmail(
+    email: _emailController.text.trim(),
+    password: _passwordController.text,
+    fullName: _nameController.text.trim(),
+    phone: _phoneController.text.trim(),
+  );
+
+  setState(() => _isLoading = false);
+
+  if (!mounted) return;
+
+  if (result['success']) {
+    // Tampilkan success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(result['message'] ?? 'Registrasi berhasil! Silakan login.'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+    
+    // Tunggu 1 detik, lalu redirect ke Login Page
+    await Future.delayed(const Duration(seconds: 1));
+    
+    if (!mounted) return;
+    
+    // Redirect ke Login Page
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginPage()),
+    );
+  } else {
+    // Tampilkan error
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(result['message']),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 60),
-              const LogoWidget(),
-              const SizedBox(height: 20),
-              const Center(
-                child: Text(
-                  'Daftar',
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: kTextColor),
-                ),
-              ),
-              const SizedBox(height: 30),
-              
-              // Input Email
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(
-                  hintText: 'Email',
-                  prefixIcon: Icon(Icons.email_outlined),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Input Username
-              TextFormField(
-                controller: _usernameController,
-                decoration: const InputDecoration(
-                  hintText: 'Username',
-                  prefixIcon: Icon(Icons.person_outline),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Input Password
-              TextFormField(
-                controller: _passwordController,
-                obscureText: !_isPasswordVisible,
-                decoration: InputDecoration(
-                  hintText: 'Password',
-                  prefixIcon: const Icon(Icons.lock_outline),
-                  suffixIcon: IconButton(
-                    icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off),
-                    onPressed: () {
-                      setState(() {
-                        _isPasswordVisible = !_isPasswordVisible;
-                      });
-                    },
+      backgroundColor: kBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: kTextColor),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20),
+                const Text(
+                  'Create Account',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: kTitleColor,
                   ),
                 ),
-              ),
-              const SizedBox(height: 20),
-
-              Row(
-                children: [
-                  Checkbox(
-                    value: _agreeToTerms,
-                    onChanged: (bool? value) {
-                      setState(() {
-                        _agreeToTerms = value ?? false;
-                      });
-                    },
-                    activeColor: kPrimaryColor,
+                const SizedBox(height: 8),
+                Text(
+                  'Sign up to get started',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
                   ),
-                  Expanded(
-                    child: RichText(
-                      text: TextSpan(
-                        text: "I'm agree to The ",
-                        style: const TextStyle(color: kTextColor, fontSize: 14),
-                        children: [
-                          TextSpan(
-                            text: 'Terms of Service',
-                            style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
-                          ),
-                          const TextSpan(text: ' and '),
-                          TextSpan(
-                            text: 'Privacy Policy',
-                            style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
-                          ),
-                        ],
+                ),
+                const SizedBox(height: 40),
+
+                // Full Name
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(
+                    hintText: 'Full Name',
+                    prefixIcon: Icon(Icons.person),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Nama tidak boleh kosong';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Email
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    hintText: 'Email',
+                    prefixIcon: Icon(Icons.email),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Email tidak boleh kosong';
+                    }
+                    if (!value.contains('@')) {
+                      return 'Format email tidak valid';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Phone
+                TextFormField(
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    hintText: 'Phone Number',
+                    prefixIcon: Icon(Icons.phone),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Nomor telepon tidak boleh kosong';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Password
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: _obscurePassword,
+                  decoration: InputDecoration(
+                    hintText: 'Password',
+                    prefixIcon: const Icon(Icons.lock),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
                       ),
+                      onPressed: () {
+                        setState(() => _obscurePassword = !_obscurePassword);
+                      },
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 30),
-
-              ElevatedButton(
-                onPressed: (_agreeToTerms && !_isLoading) ? _handleSignUp : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: kPrimaryColor,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-                  disabledBackgroundColor: Colors.grey[300],
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Password tidak boleh kosong';
+                    }
+                    if (value.length < 6) {
+                      return 'Password minimal 6 karakter';
+                    }
+                    return null;
+                  },
                 ),
-                child: _isLoading 
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Text(
-                      'Create Account',
-                      style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
-                    ),
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 16),
 
-              Center(
-                child: RichText(
-                  text: TextSpan(
-                    text: 'sudah punya akun? ',
-                    style: const TextStyle(color: kTextColor, fontSize: 15),
-                    children: [
-                      TextSpan(
-                        text: 'login',
-                        style: const TextStyle(color: kLinkColor, fontWeight: FontWeight.bold, fontSize: 15),
-                        recognizer: TapGestureRecognizer()..onTap = () {
-                          Navigator.pop(context);
-                        },
+                // Confirm Password
+                TextFormField(
+                  controller: _confirmPasswordController,
+                  obscureText: _obscureConfirmPassword,
+                  decoration: InputDecoration(
+                    hintText: 'Confirm Password',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureConfirmPassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
                       ),
-                    ],
+                      onPressed: () {
+                        setState(
+                            () => _obscureConfirmPassword = !_obscureConfirmPassword);
+                      },
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Konfirmasi password tidak boleh kosong';
+                    }
+                    if (value != _passwordController.text) {
+                      return 'Password tidak cocok';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 24),
+
+                // Sign Up Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _handleSignUp,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: kPrimaryColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            'Sign Up',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 30),
+              ],
+            ),
           ),
         ),
       ),
