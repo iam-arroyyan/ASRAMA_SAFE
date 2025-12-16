@@ -6,6 +6,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';      // ← TAMBAH
 import 'firebase_options.dart';
+import 'services/notification_service.dart';
 
 import 'pages/login_page.dart';
 import 'pages/signup_page.dart';
@@ -23,6 +24,9 @@ Future<void> main() async {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
+
+  await NotificationService.initialize();
+  await NotificationService.requestPermission();
   
   runApp(const MyApp());
 }

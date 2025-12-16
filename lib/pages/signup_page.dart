@@ -1,7 +1,10 @@
 // lib/pages/signup_page.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../theme/colors.dart';
 import '../services/auth_service.dart';
+import '../services/image_service.dart';
 import 'login_page.dart';
 
 class SignUpPage extends StatefulWidget {
@@ -22,6 +25,11 @@ class _SignUpPageState extends State<SignUpPage> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  
+  // Profile photo
+  File? _selectedImage;
+  String? _photoBase64;
+  bool _isCompressing = false;
 
   @override
   void dispose() {
@@ -33,53 +41,165 @@ class _SignUpPageState extends State<SignUpPage> {
     super.dispose();
   }
 
-  Future<void> _handleSignUp() async {
-  if (!_formKey.currentState!.validate()) return;
-
-  setState(() => _isLoading = true);
-
-  final result = await _authService.registerWithEmail(
-    email: _emailController.text.trim(),
-    password: _passwordController.text,
-    fullName: _nameController.text.trim(),
-    phone: _phoneController.text.trim(),
-  );
-
-  setState(() => _isLoading = false);
-
-  if (!mounted) return;
-
-  if (result['success']) {
-    // Tampilkan success message
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(result['message'] ?? 'Registrasi berhasil! Silakan login.'),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 2),
+  Future<void> _pickImage() async {
+    final file = await showModalBottomSheet<File?>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      builder: (context) => _buildImagePickerSheet(),
     );
     
-    // Tunggu 1 detik, lalu redirect ke Login Page
-    await Future.delayed(const Duration(seconds: 1));
-    
-    if (!mounted) return;
-    
-    // Redirect ke Login Page
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const LoginPage()),
-    );
-  } else {
-    // Tampilkan error
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(result['message']),
-        backgroundColor: Colors.red,
+    if (file != null) {
+      setState(() {
+        _selectedImage = file;
+        _isCompressing = true;
+      });
+      
+      // Compress and convert to base64
+      final base64 = await ImageService.fileToBase64(file);
+      
+      setState(() {
+        _photoBase64 = base64;
+        _isCompressing = false;
+      });
+      
+      if (base64 == null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal memproses foto'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildImagePickerSheet() {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Pilih Foto Profil',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.photo_library, color: Colors.blue),
+              ),
+              title: const Text('Pilih dari Galeri'),
+              onTap: () async {
+                Navigator.pop(context);
+                final file = await ImageService.pickImage(
+                  source: ImageSource.gallery,
+                  context: context,
+                );
+                if (mounted && file != null) {
+                  Navigator.pop(context, file);
+                }
+              },
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.camera_alt, color: Colors.green),
+              ),
+              title: const Text('Ambil Foto'),
+              onTap: () async {
+                Navigator.pop(context);
+                final file = await ImageService.pickImage(
+                  source: ImageSource.camera,
+                  context: context,
+                );
+                if (mounted && file != null) {
+                  Navigator.pop(context, file);
+                }
+              },
+            ),
+            if (_selectedImage != null)
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.delete, color: Colors.red),
+                ),
+                title: const Text('Hapus Foto'),
+                onTap: () {
+                  setState(() {
+                    _selectedImage = null;
+                    _photoBase64 = null;
+                  });
+                  Navigator.pop(context);
+                },
+              ),
+          ],
+        ),
       ),
     );
   }
-}
 
+  Future<void> _handleSignUp() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    final result = await _authService.registerWithEmail(
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+      fullName: _nameController.text.trim(),
+      phone: _phoneController.text.trim(),
+      photoBase64: _photoBase64,
+    );
+
+    setState(() => _isLoading = false);
+
+    if (!mounted) return;
+
+    if (result['success']) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message'] ?? 'Registrasi berhasil! Silakan login.'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      
+      await Future.delayed(const Duration(seconds: 1));
+      
+      if (!mounted) return;
+      
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginPage()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message']),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -118,7 +238,67 @@ class _SignUpPageState extends State<SignUpPage> {
                     color: Colors.grey[600],
                   ),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 30),
+
+                // Profile Photo Picker
+                Center(
+                  child: GestureDetector(
+                    onTap: _pickImage,
+                    child: Stack(
+                      children: [
+                        _isCompressing
+                            ? CircleAvatar(
+                                radius: 50,
+                                backgroundColor: Colors.grey[200],
+                                child: const CircularProgressIndicator(),
+                              )
+                            : _selectedImage != null
+                                ? CircleAvatar(
+                                    radius: 50,
+                                    backgroundImage: FileImage(_selectedImage!),
+                                    backgroundColor: Colors.grey[200],
+                                  )
+                                : CircleAvatar(
+                                    radius: 50,
+                                    backgroundColor: Colors.grey[200],
+                                    child: Icon(
+                                      Icons.person,
+                                      size: 50,
+                                      color: Colors.grey[400],
+                                    ),
+                                  ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: kPrimaryColor,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Center(
+                  child: Text(
+                    'Tambah Foto (Opsional)',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
 
                 // Full Name
                 TextFormField(

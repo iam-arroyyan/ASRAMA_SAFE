@@ -18,6 +18,7 @@ class AuthService {
     required String password,
     required String fullName,
     required String phone,
+    String? photoBase64,
   }) async {
     try {
       // Create user di Firebase Auth
@@ -30,13 +31,20 @@ class AuthService {
       await userCredential.user?.updateDisplayName(fullName);
 
       // Simpan data user ke Realtime Database
-      await _db.child('users').child(userCredential.user!.uid).set({
+      final userData = {
         'uid': userCredential.user!.uid,
         'email': email,
         'fullName': fullName,
         'phone': phone,
         'createdAt': DateTime.now().millisecondsSinceEpoch,
-      });
+      };
+      
+      // Add photo if provided
+      if (photoBase64 != null && photoBase64.isNotEmpty) {
+        userData['photoBase64'] = photoBase64;
+      }
+      
+      await _db.child('users').child(userCredential.user!.uid).set(userData);
 
       return {
         'success': true,
@@ -138,11 +146,13 @@ class AuthService {
     required String uid,
     String? fullName,
     String? phone,
+    String? photoBase64,
   }) async {
     try {
       Map<String, dynamic> updates = {};
       if (fullName != null) updates['fullName'] = fullName;
       if (phone != null) updates['phone'] = phone;
+      if (photoBase64 != null) updates['photoBase64'] = photoBase64;
       
       await _db.child('users').child(uid).update(updates);
       
@@ -154,6 +164,40 @@ class AuthService {
       return true;
     } catch (e) {
       return false;
+    }
+  }
+
+  // Send password reset email
+  Future<Map<String, dynamic>> sendPasswordResetEmail({
+    required String email,
+  }) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+      return {
+        'success': true,
+        'message': 'Email reset password telah dikirim ke $email',
+      };
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      switch (e.code) {
+        case 'user-not-found':
+          errorMessage = 'Email tidak terdaftar';
+          break;
+        case 'invalid-email':
+          errorMessage = 'Format email tidak valid';
+          break;
+        default:
+          errorMessage = 'Terjadi kesalahan: ${e.message}';
+      }
+      return {
+        'success': false,
+        'message': errorMessage,
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Gagal mengirim email reset password',
+      };
     }
   }
 }
